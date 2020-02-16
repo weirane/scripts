@@ -1,0 +1,66 @@
+#!/bin/sh
+
+# Helper for cargo
+# `cargo tdir d` for target directory
+# `cargo tdir n` for binary name
+# `cargo tdir e` for binary path, add -r flag for release mode of binary path
+
+set -e
+if [ "$1" != "tdir" ]; then
+    echo >&2 "Run this script as \`cargo tdir ...'"
+    exit 1
+fi
+shift
+
+get_meta() {
+    if [ -z "$meta" ]; then
+        meta=$(cargo metadata --format-version=1)
+    fi
+    echo "$meta"
+}
+
+get_target_dir() {
+    if [ -z "$target_dir" ]; then
+        target_dir=$(get_meta | jq -r .target_directory)
+    fi
+    echo "$target_dir"
+}
+
+get_name() {
+    if [ -z "$meta" ]; then
+        name=$(get_meta | jq -r .resolve.root | cut -d' ' -f1)
+    fi
+    echo "$name"
+}
+
+sub="$1"
+
+if [ -z "$sub" ]; then
+    echo >&2 "Available sub command:"
+    echo >&2 "    d dir directory"
+    echo >&2 "    e exe executable"
+    echo >&2 "    n name"
+    exit 1
+fi
+shift
+
+case "$sub" in
+    d | dir | directory)
+        get_target_dir
+        ;;
+    e | exe | executable)
+        if [ "$1" = -r ]; then
+            build_type=release
+        else
+            build_type=debug
+        fi
+        echo "$(get_target_dir)/$build_type/$(get_name)"
+        ;;
+    n | name)
+        get_name
+        ;;
+    *)
+        echo >&2 "Invalid sub command"
+        exit 1
+        ;;
+esac

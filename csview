@@ -1,0 +1,5 @@
+#!/bin/sh
+
+# A simple CSV viewer
+
+exec perl -pe 's/((?<=,)|(?<=^)),/ ,/g;' "$@" | exec column -t -s,
