@@ -1,0 +1,8 @@
+#!/bin/sh
+
+# Init the git directory and add an empty root commit
+
+set -e
+[ ! -d .git ] || exit 0
+git init
+git commit --allow-empty -m "${1:-Root commit}"
