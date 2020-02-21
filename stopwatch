@@ -1,8 +1,36 @@
 #!/bin/bash
 
-# Count down for a specified time
-# Example (count down for 3 minutes and 30 seconds):
-#   $ countdown 3m 30s
+# Without arguments:
+#   Count up from zero
+#
+# With arguments:
+#   Count down for a specified time
+#   Example (count down for 3 minutes and 30 seconds):
+#     $ countdown 3m 30s
+
+show_time() {
+    local time hours minutes seconds
+    time=$1
+    hours=$((time / 3600))
+    time=$((time % 3600))
+    minutes=$((time / 60))
+    seconds=$((time % 60))
+    printf "\r%d:%02d:%02d" "$hours" "$minutes" "$seconds"
+}
+
+trap 'exit 0' INT
+trap 'tput cnorm' EXIT
+tput civis
+
+if [ -z "$1" ]; then
+    elapsed=0
+    while true; do
+        show_time "$elapsed"
+        elapsed=$((elapsed + 1))
+        sleep 1
+    done
+    exit 0
+fi
 
 shopt -s extglob
 
@@ -37,14 +65,9 @@ while [ -n "$1" ]; do
     shift
 done
 
-trap 'tput cnorm' EXIT
-tput civis
-
-digits=$(echo "scale=0; l($time)/l(10) + 1" | bc -l)
-
 while [ "$time" -gt 0 ]; do
     time=$((time - 1))
-    printf "\r%${digits}d" $time
+    show_time "$time"
     sleep 1
 done
 
