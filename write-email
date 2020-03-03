@@ -1,0 +1,12 @@
+#!/bin/sh
+
+# Choose an account and write an email
+
+export LANG=en_US.UTF-8
+neomutt=$HOME/.config/neomutt
+
+find "$neomutt" -maxdepth 1 -name '*.account' -type f -exec basename {} \; |
+    sed 's/\.account$//' |
+    rofi -dmenu -i -no-custom -p 'Use which account?' |
+    xargs -r printf "\"neomutt -e 'unmailboxes *' -e 'source $neomutt/%s.account' $*\"" |
+    xargs -r termite --name=FloatExec -e
