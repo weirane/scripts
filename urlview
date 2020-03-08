@@ -2,6 +2,12 @@
 
 # Extract URLs from stdin then copy or view it
 
+# stdin cannot be a terminal
+if [ -t 0 ]; then
+    echo >&2 "stdin cannot be a terminal"
+    exit
+fi
+
 selected=$(urlex -r | uniq | rofi -dmenu -i -no-custom -p 'Select a URL')
 
 [ -z "$selected" ] && exit
