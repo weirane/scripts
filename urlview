@@ -2,33 +2,45 @@
 
 # Extract URLs from stdin then copy or view it
 
-# stdin cannot be a terminal
-if [ -t 0 ]; then
-    echo >&2 "stdin cannot be a terminal"
-    exit
-fi
+action() {
+    case "$1" in
+        Copy)
+            printf %s "$2" | xclip -selection clipboard
+            notify-send 'urlview' 'URL copied to clipboard'
+            exit
+            ;;
+        View)
+            xdg-open "$2"
+            exit
+            ;;
+        Back)
+            selected=
+            ;;
+        *)
+            exit 0
+            ;;
+    esac
+}
 
-selected=$(urlex -r | uniq | rofi -dmenu -i -no-custom -p 'Select a URL')
+urls=$(urlex -r | awk '!x[$0]++')
+[ -z "$urls" ] && exit
 
-[ -z "$selected" ] && exit
+while true; do
+    selected=$(echo "$urls" | rofi -dmenu -i -no-custom -p 'Select a URL')
+    [ -z "$selected" ] && exit
 
-case "$1" in
-    -c | --copy) # copy
-        echo "$selected" | xclip -selection clipboard
-        ;;
-    -v | --view) # view
-        xdg-open "$selected"
-        ;;
-    *) # ask
-        method=$(printf "Copy\nView\n" |
-            rofi -dmenu -i -no-custom -lines 5 -p 'Action' -mesg "$selected")
-        case "$method" in
-            Copy)
-                echo "$selected" | xclip -selection clipboard
-                ;;
-            View)
-                xdg-open "$selected"
-                ;;
-        esac
-        ;;
-esac
+    case "$1" in
+        -c | --copy) # copy
+            action Copy "$selected"
+            ;;
+        -v | --view) # view
+            action View "$selected"
+            ;;
+        *) # ask
+            method=$(printf "View\nCopy\nBack\nQuit\n" |
+                rofi -dmenu -i -no-custom -lines 6 -p 'Action' -mesg "$selected")
+            [ -z "$method" ] && exit
+            action "$method" "$selected"
+            ;;
+    esac
+done
