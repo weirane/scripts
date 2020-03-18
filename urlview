@@ -22,7 +22,12 @@ action() {
     esac
 }
 
-urls=$(urlex -r | awk '!x[$0]++')
+if [ "$1" = -r ]; then
+    urls=$(urlex -r | awk '!x[$0]++')
+    shift
+else
+    urls=$(urlex | awk '!x[$0]++')
+fi
 [ -z "$urls" ] && exit
 
 while true; do
