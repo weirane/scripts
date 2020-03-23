@@ -8,5 +8,5 @@ neomutt=$HOME/.config/neomutt
 find "$neomutt" -maxdepth 1 -name '*.account' -type f -exec basename {} \; |
     sed 's/\.account$//' |
     rofi -dmenu -i -no-custom -p 'Use which account?' |
-    xargs -r -I'{}' printf "\"neomutt -e 'unmailboxes *' -e 'source $neomutt/%s.account' %s\"" '{}' "$*" |
-    xargs -r termite --name=FloatExec --title="neomutt $*" -e
+    xargs -r -I'{}' printf "neomutt -e 'unmailboxes *' -e 'source $neomutt/%s.account' %s" '{}' "$*" |
+    xargs -r alacritty --class=FloatExec --title="neomutt $*" -e
