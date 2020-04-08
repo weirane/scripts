@@ -1,0 +1,7 @@
+#!/bin/sh
+
+# View texlive documentations in zathura
+
+[ -z "$1" ] && exit
+
+curl -sSL "https://texdoc.net/pkg/$1" | zathura - &
