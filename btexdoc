@@ -1,0 +1,7 @@
+#!/bin/sh
+
+# View texlive documentations in the browser
+
+[ -z "$1" ] && exit
+
+exec "${BROWSER:-xdg-open}" "https://texdoc.net/pkg/$1"
