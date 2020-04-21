@@ -1,0 +1,7 @@
+#!/bin/sh
+
+# Open the documentation of a rust crate in the browser.
+
+[ -z "$1" ] && exit
+
+exec "${BROWSER:-xdg-open}" "https://docs.rs/$1"
