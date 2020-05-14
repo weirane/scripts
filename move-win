@@ -1,0 +1,70 @@
+#!/bin/sh
+
+# Move windows to the edge or center
+
+set -e
+
+focus=$(xdotool getwindowfocus)
+
+# dimension
+xy=$(xdotool getwindowgeometry "$focus" | awk '/^  Geometry:/ {print $2}')
+x=$(echo "$xy" | cut -dx -f1)
+y=$(echo "$xy" | cut -dx -f2)
+# display
+dxy=$(xdotool getdisplaygeometry)
+dx=$(echo "$dxy" | cut -d' ' -f1)
+dy=$(echo "$dxy" | cut -d' ' -f2)
+
+if [ -z "$x" ] || [ -z "$y" ] || [ -z "$dx" ] || [ -z "$dy" ]; then
+    echo 'Error collecting geometry'
+    exit 1
+fi
+
+# position
+px() {
+    xwininfo -id "$focus" | awk '/^  Absolute upper-left X:/ { print $NF }'
+}
+py() {
+    xwininfo -id "$focus" | awk '/^  Absolute upper-left Y:/ { print $NF }'
+}
+
+move() {
+    case "$2" in
+        n)
+            xdotool windowmove "$1" "$(px)" 0
+            ;;
+        w)
+            xdotool windowmove "$1" 0 "$(py)"
+            ;;
+        s)
+            xdotool windowmove "$1" "$(px)" $((dy - y))
+            ;;
+        e)
+            xdotool windowmove "$1" $((dx - x)) "$(py)"
+            ;;
+        c)
+            # center
+            xdotool windowmove "$1" $(((dx - x) / 2)) $(((dy - y) / 2))
+            ;;
+        nw)
+            xdotool windowmove "$1" 0 0
+            ;;
+        ne)
+            xdotool windowmove "$1" $((dx - x)) 0
+            ;;
+        sw)
+            xdotool windowmove "$1" 0 $((dy - y))
+            ;;
+        se)
+            xdotool windowmove "$1" $((dx - x)) $((dy - y))
+            ;;
+        *)
+            echo >&2 "Invalid: $2"
+            exit 1
+            ;;
+    esac
+}
+
+for c in "$@"; do
+    move "$focus" "$c"
+done
