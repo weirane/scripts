@@ -1,0 +1,34 @@
+#!/bin/bash
+
+# Concatenate videos with ffmpeg
+#
+#   vidcat INPUTS... -o FILE
+#     -o FILE: specify output file
+
+inputs=()
+output=
+while [ -n "$1" ]; do
+    case "$1" in
+        -o) shift; output="$1" ;;
+        --) shift; inputs+=("$@"); break ;;
+        -h) printf "Usage:\n  vidcat INPUTS... -o FILE\n"; exit ;;
+        *) inputs+=("$1") ;;
+    esac
+    shift
+done
+
+die() {
+    echo >&2 "$@"
+    exit 1
+}
+
+[ "${#inputs[@]}" -eq 0 ] && die "no input"
+[ -z "$output" ] && die "no output"
+
+inputfile=$(mktemp -p .)
+trap "rm -f $inputfile" EXIT
+
+for f in "${inputs[@]}"; do
+    echo "file '$f'"
+done > "$inputfile"
+ffmpeg -f concat -safe 0 -i "$inputfile" -c copy "$output"
