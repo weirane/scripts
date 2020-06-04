@@ -2,4 +2,4 @@
 
 # A simple CSV viewer
 
-exec perl -pe 's/((?<=,)|(?<=^)),/ ,/g;' "$@" | exec column -t -s,
+perl -pe 's/((?<=,)|(?<=^)),/ ,/g;' "$@" | column -t -s,
