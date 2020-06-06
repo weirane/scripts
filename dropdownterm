@@ -1,0 +1,9 @@
+#!/bin/sh
+
+# The dropdown terminal, same as the command in my i3 config
+
+# check if the dropdown terminal exists
+xdotool search --class Alacritty search --classname dropdown-terminal >/dev/null && exit
+
+alacritty --title=Dropdown --class=dropdown-terminal \
+    -e sh -c 'while true; do tmux new -s dropdown || tmux attach -t dropdown || break; done' &
