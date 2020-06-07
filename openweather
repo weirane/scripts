@@ -1,0 +1,75 @@
+#!/bin/bash
+
+# Get weather information from openweathermap every 15 min. Use it with systemd:
+#
+# ~/.config/systemd/user/openweather.service:
+#
+#     [Unit]
+#     Description=Openweather daemon
+#
+#     [Service]
+#     EnvironmentFile=/path/to/owm-key
+#     ExecStart=/path/to/openweather
+#     Restart=always
+#     RestartSec=300
+#
+#     [Install]
+#     WantedBy=default.target
+#
+# owm-key:
+#
+#     KEY=xxxxxx
+
+outfile=$HOME/.cache/openweather.json
+
+API="https://api.openweathermap.org/data/2.5"
+: "${KEY:?KEY should be set}"
+
+get_loc=1
+echo $$ > "$XDG_RUNTIME_DIR/openweather.pid"
+
+get_bar_weather_pid() {
+    [ "${#bar_weather_pid[@]}" -gt 0 ] && return
+    readarray -t bar_weather_pid < "$XDG_RUNTIME_DIR/polybar-openweather.pid"
+}
+
+signal_bar() {
+    get_bar_weather_pid
+    case "$1" in
+        ping) kill -RTMIN+1 "${bar_weather_pid[@]}" ;;
+        loc) kill -RTMIN+2 "${bar_weather_pid[@]}" ;;
+        weather) kill -RTMIN+3 "${bar_weather_pid[@]}" ;;
+        idle) kill -RTMIN+4 "${bar_weather_pid[@]}" ;;
+    esac || bar_weather_pid=()
+}
+
+update_loc() {
+    location=''
+    get_loc=1
+    kill %% >/dev/null 2>&1
+}
+
+trap 'update_loc' USR1
+
+while true; do
+    signal_bar ping
+    while true; do
+        ping api.openweathermap.org -c 3 >/dev/null 2>&1 && break
+        sleep 60 &
+        while pgrep -P $$ -x sleep >/dev/null; do wait; done
+    done
+    if [ "$get_loc" = 1 ]; then
+        signal_bar loc
+        location=$(curl -sf --retry 3 "https://location.services.mozilla.com/v1/geolocate?key=geoclue")
+        get_loc=0
+    fi
+    signal_bar weather
+    if [ -n "$location" ]; then
+        location_lat="$(echo "$location" | jq '.location.lat')"
+        location_lon="$(echo "$location" | jq '.location.lng')"
+        curl -sf --retry 3 "$API/weather?appid=$KEY&lat=$location_lat&lon=$location_lon&units=metric" > "$outfile"
+        signal_bar idle
+    fi
+    sleep 900 &
+    while pgrep -P $$ -x sleep >/dev/null 2>&1; do wait; done
+done
