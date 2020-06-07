@@ -8,12 +8,12 @@ focus=$(xdotool getwindowfocus)
 
 # dimension
 xy=$(xdotool getwindowgeometry "$focus" | awk '/^  Geometry:/ {print $2}')
-x=$(echo "$xy" | cut -dx -f1)
-y=$(echo "$xy" | cut -dx -f2)
+x=${xy%%x*}
+y=${xy##*x}
 # display
 dxy=$(xdotool getdisplaygeometry)
-dx=$(echo "$dxy" | cut -d' ' -f1)
-dy=$(echo "$dxy" | cut -d' ' -f2)
+dx=${dxy%% *}
+dy=${dxy##* }
 
 if [ -z "$x" ] || [ -z "$y" ] || [ -z "$dx" ] || [ -z "$dy" ]; then
     echo 'Error collecting geometry'
