@@ -1,0 +1,6 @@
+#!/bin/sh
+
+# Show the environment of a process specified by PID
+
+[ -z "$1" ] && return
+tr '\0' '\n' < "/proc/$1/environ"
