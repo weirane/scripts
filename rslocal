@@ -4,6 +4,7 @@
 # by Rust Search Extension in firefox
 
 port=9200
+: "${RUSTUP_HOME:=$HOME/.rustup}"
 toolchain="nightly-x86_64-unknown-linux-gnu"
 
 case "$1" in
@@ -20,7 +21,7 @@ case "$1" in
     *)
         pkill -f "python -m http.server $port" >/dev/null 2>&1
         setsid --fork timeout 5h python -m http.server "$port" \
-            --directory "$HOME/.rustup/toolchains/$toolchain/share/doc/rust/html" \
+            --directory "$RUSTUP_HOME/toolchains/$toolchain/share/doc/rust/html" \
             >/dev/null 2>&1
         ;;
 esac
