@@ -2,5 +2,5 @@
 
 # Show the command line of a process specified by PID
 
-[ -z "$1" ] && return
+[ -z "$1" ] && exit
 xargs -0 < "/proc/$1/cmdline"

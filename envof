@@ -2,5 +2,5 @@
 
 # Show the environment of a process specified by PID
 
-[ -z "$1" ] && return
+[ -z "$1" ] && exit
 tr '\0' '\n' < "/proc/$1/environ"
