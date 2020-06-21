@@ -1,0 +1,13 @@
+#!/bin/sh
+
+# Swallow the current window with a command
+
+set -eu
+
+[ $# -ne 0 ] || exit 0
+
+id=$(xdo id)
+trap "xdo show $id" EXIT
+xdo hide
+
+"$@"
