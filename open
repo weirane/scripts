@@ -1,0 +1,40 @@
+#!/bin/sh
+
+# open a file from the terminal
+
+[ -r "$1" ] || exit 1
+mime=$(file --mime -bL "$1")
+mime=${mime%%;*}
+
+# open in terminal or browser
+case "$mime" in
+    audio/*) exec mpv "$1" ;;
+    text/html | image/svg+xml) exec "${BROWSER:-firefox}" "$1" ;;
+    text/* | inode/x-empty) exec "${EDITOR:-vim}" "$1" ;;
+esac
+
+[ "$2" != "en" ] && export LANG="zh_CN.UTF-8"
+
+if [ -n "$TMUX" ]; then
+    # inside tmux, float
+    case "$mime" in
+        # NOTE: the option --name=FloatExec for zathura is from my fork
+        # https://github.com/weirane/zathura
+        application/pdf) exec zathura --name=FloatExec --fork "$1" ;;
+        image/gif) exec mpv --x11-name=FloatExec --loop=inf \
+                            --player-operation-mode=pseudo-gui "$1" ;;
+        image/*) exec sxiv -N FloatExec "$1" ;;
+        video/*) exec mpv --x11-name=FloatExec --player-operation-mode=pseudo-gui "$1" ;;
+    esac
+else
+    # swallow the current terminal
+    case "$mime" in
+        application/pdf) exec swl zathura "$1" ;;
+        image/gif) exec swl mpv --loop=inf --player-operation-mode=pseudo-gui "$1" ;;
+        image/*) exec swl sxiv "$1" ;;
+        video/*) exec swl mpv --player-operation-mode=pseudo-gui "$1" ;;
+    esac
+fi
+
+# fallback
+setsid --fork xdg-open "$1" >/dev/null 2>&1
