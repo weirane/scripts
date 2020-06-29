@@ -5,7 +5,7 @@
 export LANG=en_US.UTF-8
 neomutt=$HOME/.config/neomutt
 
-find "$neomutt" -maxdepth 1 -name '*.account' -type f -exec basename {} \; |
+find "$neomutt/" -maxdepth 1 -name '*.account' -type f -exec basename {} \; |
     sed 's/\.account$//' |
     rofi -dmenu -i -no-custom -p 'Use which account?' |
     xargs -r -I'{}' printf "neomutt -e 'unmailboxes *' -e 'source $neomutt/%s.account' %s" '{}' "$*" |
