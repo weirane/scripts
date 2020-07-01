@@ -30,7 +30,10 @@ echo $$ > "$XDG_RUNTIME_DIR/openweather.pid"
 
 get_bar_weather_pid() {
     [ "${#bar_weather_pid[@]}" -gt 0 ] && return
-    readarray -t bar_weather_pid < "$XDG_RUNTIME_DIR/polybar-openweather.pid"
+    local polybars
+    polybars=$(pgrep -x polybar | paste -sd,)
+    [ -z "$polybars" ] && return
+    readarray -t bar_weather_pid < <(pgrep -P "$polybars" -f openweathermap)
 }
 
 signal_bar() {
