@@ -2,7 +2,11 @@
 
 # open a file from the terminal
 
-[ -r "$1" ] || exit 1
+fallback() {
+    exec setsid --fork xdg-open "$1" >/dev/null 2>&1
+}
+
+[ -r "$1" ] || fallback "$1"
 mime=$(file --mime -bL "$1")
 mime=${mime%%;*}
 
@@ -37,4 +41,4 @@ else
 fi
 
 # fallback
-setsid --fork xdg-open "$1" >/dev/null 2>&1
+fallback "$1"
