@@ -6,19 +6,11 @@ action() {
     case "$1" in
         Copy)
             printf %s "$2" | xclip -selection clipboard
-            notify-send 'urlview' 'URL copied to clipboard'
             exit
             ;;
-        View)
-            xdg-open "$2"
-            exit
-            ;;
-        Back)
-            selected=
-            ;;
-        *)
-            exit 0
-            ;;
+        View) xdg-open "$2"; exit ;;
+        Back) selected= ;;
+        *) exit 0 ;;
     esac
 }
 
@@ -35,12 +27,8 @@ while true; do
     [ -z "$selected" ] && exit
 
     case "$1" in
-        -c | --copy) # copy
-            action Copy "$selected"
-            ;;
-        -v | --view) # view
-            action View "$selected"
-            ;;
+        -c | --copy) action Copy "$selected" ;;
+        -v | --view) action View "$selected" ;;
         *) # ask
             method=$(printf "View\nCopy\nBack\nQuit\n" |
                 rofi -dmenu -i -no-custom -lines 6 -p 'Action' -mesg "$selected")
