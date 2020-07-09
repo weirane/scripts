@@ -36,7 +36,8 @@ while true; do
         -v | --view) action View "$selected" ;;
         *) # ask
             method=$(printf "View\nCopy\nBack\nQuit\n" |
-                rofi -dmenu -i -no-custom -lines 6 -p 'Action' -mesg "$selected")
+                rofi -dmenu -i -no-custom -lines 6 -p 'Action' \
+                     -mesg "$(echo "$selected" | sed 's/&/&amp;/g')")
             [ -z "$method" ] && exit
             action "$method" "$selected"
             ;;
