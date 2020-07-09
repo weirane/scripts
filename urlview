@@ -2,25 +2,30 @@
 
 # Extract URLs from stdin then copy or view it
 
+export LC_ALL=C
+
+url_regex=$(cat <<EOF
+((https?|ftp)://[^<>"'[:space:]]*|(www|ftp)[0-9]?\.[.0-9a-zA-Z-]+)[^.,;<>"'):[:space:]]?[^,<>"'[:space:]]*[^.,;<>"'):[:space:]，。；」]
+EOF
+)
+
+if [ "$1" = -r ]; then
+    # reverse
+    urls=$(grep -oE "$url_regex" | awk '!x[$0]++' | tac)
+    shift
+else
+    urls=$(grep -oE "$url_regex" | awk '!x[$0]++')
+fi
+[ -z "$urls" ] && exit
+
 action() {
     case "$1" in
-        Copy)
-            printf %s "$2" | xclip -selection clipboard
-            exit
-            ;;
-        View) xdg-open "$2"; exit ;;
+        Copy) printf %s "$2" | xclip -selection clipboard; exit ;;
+        View) "${BROWSER:-xdg-open}" "$2"; exit ;;
         Back) selected= ;;
         *) exit 0 ;;
     esac
 }
-
-if [ "$1" = -r ]; then
-    urls=$(urlex -r | awk '!x[$0]++')
-    shift
-else
-    urls=$(urlex | awk '!x[$0]++')
-fi
-[ -z "$urls" ] && exit
 
 while true; do
     selected=$(echo "$urls" | rofi -dmenu -i -no-custom -p 'Select a URL')
