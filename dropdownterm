@@ -1,8 +1,8 @@
 #!/bin/sh
 
-# The dropdown terminal, same as the command in my i3 config
+# The dropdown terminal for my i3 config
 
-# check if the dropdown terminal exists
+# check if the dropdown terminal already exists
 xdotool search --class Alacritty search --classname dropdown-terminal >/dev/null && exit
 
 cd || true
