@@ -7,4 +7,4 @@ xdotool search --class Alacritty search --classname dropdown-terminal >/dev/null
 
 cd || true
 alacritty --title=Dropdown --class=dropdown-terminal \
-    -e sh -c 'while true; do tmux new -s dropdown || tmux attach -t dropdown || break; done' &
+    -e sh -c 'while true; do tmux new -A -s dropdown || break; done' &
