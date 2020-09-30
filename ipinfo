@@ -1,6 +1,6 @@
 #!/bin/bash
 
 while :; do
-    curl --connect-timeout 0.3 -s "https://ipinfo.io/$1" | jq .
-    [ "${PIPESTATUS[0]}" = 0 ] && break
+    curl --connect-timeout 1 -s "https://ipinfo.io/$1" | jq .
+    [[ "${PIPESTATUS[0]}" == 0 ]] && break
 done
