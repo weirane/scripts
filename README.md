@@ -1,2 +1,2 @@
 # scripts
-Some of my helper shell scripts.
+Some of my helper scripts.

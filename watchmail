@@ -1,0 +1,250 @@
+#!/usr/bin/ruby
+# frozen_string_literal: true
+
+# A system tray appliation notifying you about your new emails. Uses the IDLE
+# capability of email servers or polls the server with an interval. Dependency
+# packages on Arch Linux: ruby, ruby-mail, yad and libnotify
+#
+# Config file ${XDG_CONFIG_HOME:-$HOME/.config}/watchmailrc.rb:
+#
+# $CONFIG = {
+#   watchmail: {
+#     # Seconds to sleep after login failure, optional, defaults to 600
+#     login_fail_sleep: 300,
+#   },
+#   accounts: {
+#     example_name_push: {
+#       type: 'push',
+#       host: 'imap.example.com',
+#       port: 993,
+#       user: 'example@example.com',
+#       pswd: `pass show example`.strip,
+#       notify_cmd: 'mbsync example &',
+#     },
+#     example_name_pull: {
+#       type: 'pull',
+#       host: 'imap.example2.com',
+#       port: 993,
+#       user: 'example@example2.com',
+#       pswd: `pass show example2`.strip,
+#       notify_cmd: 'mbsync example2 &',
+#       interval: 600,
+#     },
+#   }
+# }
+
+require 'English'
+require 'date'
+require 'mail'
+require 'net/imap'
+require 'open3'
+require 'set'
+begin
+  config_file = File.join(ENV['XDG_CONFIG_HOME'] || File.join(ENV.fetch('HOME'), '.config'),
+                          'watchmailrc.rb')
+  require config_file
+rescue LoadError
+  config_file.sub!(ENV['HOME'], '~') if ENV['HOME']
+  warn "Config should be put inside #{config_file}"
+  exit 1
+end
+
+def notify_send(title, body)
+  system 'notify-send', '--icon', 'mail_new', title, body
+end
+
+class IDLENotSupported < StandardError
+  def message
+    'IDLE not supported'
+  end
+end
+
+class Account
+  attr_reader :name, :session
+
+  def initialize(name, config)
+    @name = name.to_s
+    @host = config.fetch(:host)
+    @port = config.fetch(:port, 993)
+    @user = config.fetch(:user)
+    @pswd = config.fetch(:pswd)
+    @notify_cmd = config[:notify_cmd]
+    @session = nil
+    @notified = Set.new
+  end
+
+  def self.from_config(name, config)
+    type = config[:type]
+    if type.to_s == 'push'
+      PushAccount.new name, config
+    else
+      PullAccount.new name, config
+    end
+  end
+
+  def login
+    loop do
+      @session = Net::IMAP.new(@host, port: @port, ssl: true)
+      check_capability
+      @session.login(@user, @pswd)
+      @session.examine('INBOX')
+      break
+    rescue Net::IMAP::ResponseError, IDLENotSupported
+      raise
+    rescue StandardError => e
+      warn "#{@name}: unable to login: #{e}"
+      sleep $CONFIG[:watchmail][:login_fail_sleep]
+    end
+  end
+
+  def check_capability; end
+
+  def check
+    loop do
+      ids = @session.search(['UNSEEN'])
+      num_unseen = ids.length
+      yield num_unseen
+
+      unless ids.empty?
+        envelopes = @session.fetch(ids, 'ENVELOPE').map { |e| e.attr['ENVELOPE'] }
+        hashes = envelopes.map(&:hash).to_set
+        unless hashes.subset? @notified
+          if @notify_cmd
+            system @notify_cmd or warn "#{@notify_cmd} execution failed"
+          end
+
+          @notified += hashes
+          subjects = envelopes.map do |envelope|
+            subject = Mail::Encodings.unquote_and_convert_to(envelope.subject, 'utf-8')
+            # datetime has endings like " (UTC)" or " (GMT+08:00)"
+            date = DateTime.rfc2822(envelope.date.sub(/ \([A-Z0-9:+-]*\)$/, ''))
+            [date, subject]
+          end
+          title = "@#{@name} has new mail (#{num_unseen} unseen)"
+          body = subjects.sort_by { |date, _| date }.reverse.map do |_, subj|
+            "> #{subj}"
+          end.join "\n"
+          puts title
+          notify_send title, body
+        end
+      end
+      wait
+    end
+  end
+
+  def wait
+    raise NoMethodError, 'wait needs to be overwritten'
+  end
+end
+
+class PushAccount < Account
+  def check_capability
+    unless @session.capability.include? 'IDLE'
+      @session.disconnect
+      raise IDLENotSupported
+    end
+  end
+
+  def wait
+    @session.idle(29 * 60) do |resp|
+      if resp.is_a?(Net::IMAP::UntaggedResponse) &&
+         (%w[EXISTS EXPUNGE].include?(resp.name) ||
+          (resp.name == 'FETCH' && resp.data.attr.keys.include?('FLAGS')))
+        @session.idle_done
+        break
+      end
+    end
+  end
+end
+
+class PullAccount < Account
+  def initialize(name, config)
+    super(name, config)
+    @interval = config.fetch(:interval, 6 * 60)
+  end
+
+  def wait
+    sleep @interval
+  end
+end
+
+def main
+  $CONFIG[:watchmail] ||= {}
+  sleep_time = $CONFIG[:watchmail][:login_fail_sleep].to_i
+  $CONFIG[:watchmail][:login_fail_sleep] = sleep_time >= 60 ? sleep_time : 600
+  $CONFIG.freeze
+  accounts = $CONFIG[:accounts].map do |name, config|
+    Account.from_config name, config
+  end
+  Open3.popen2('yad',
+               '--notification',
+               '--listen',
+               '--no-middle',
+               "--menu=Quit!kill -TERM #{$PID}!gtk-quit") do |stdin, _, thread|
+    stdin.puts 'icon:network-disconnect'
+    stdin.puts 'tooltip:Disconnected'
+    accounts = accounts.filter_map do |acc|
+      acc.login
+      acc
+    rescue IDLENotSupported
+      warn "#{acc.name}'s mail server doesn't support IDLE"
+      nil
+    rescue Net::IMAP::NoResponseError
+      warn "#{acc.name} login failed"
+      nil
+    end
+    if accounts.empty?
+      warn 'no valid account'
+      exit 1
+    end
+
+    queue = Queue.new
+    threads = accounts.map do |acc|
+      Thread.new do
+        loop do
+          acc.check do |num_unseen|
+            queue << [acc.name, num_unseen]
+          end
+        rescue Errno::ETIMEDOUT, Errno::ECONNRESET, Errno::ENETUNREACH,
+               Net::IMAP::ByeResponseError, EOFError
+          acc.login
+        rescue StandardError => e
+          warn e.inspect
+          acc.login
+        end
+      end
+    end
+    trap 'INT' do
+      puts 'Exiting'
+      threads.each { |t| Thread.kill t }
+      Process.kill 'INT', thread.pid
+      exit
+    end
+    trap 'TERM' do
+      threads.each { |t| Thread.kill t }
+      Process.kill 'TERM', thread.pid
+      exit
+    end
+
+    stdin.puts 'icon:mail_generic'
+    stdin.puts 'tooltip:Mail'
+    num_unseens = {}
+    loop do
+      name, num = queue.pop
+      num_unseens[name] = num
+      icon = num_unseens.values.all?(&:zero?) ? 'mail_generic' : 'mail_new'
+      tooltip = num_unseens.filter_map do |acc, num|
+        if num > 0
+          "#{acc} (#{num})"
+        end
+      end.join ', '
+      tooltip = 'Mail' if tooltip.empty?
+      stdin.puts "icon:#{icon}"
+      stdin.puts "tooltip:#{tooltip}"
+    end
+  end
+end
+
+if $PROGRAM_NAME == __FILE__
+  main
+end
