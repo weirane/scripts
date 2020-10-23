@@ -117,7 +117,7 @@ class Account
           subjects = envelopes.map do |envelope|
             subject = Mail::Encodings.unquote_and_convert_to(envelope.subject, 'utf-8')
             # datetime has endings like " (UTC)" or " (GMT+08:00)"
-            date = DateTime.rfc2822(envelope.date.sub(/ \([A-Z0-9:+-]*\)$/, ''))
+            date = DateTime.rfc2822(envelope.date.sub(/ \([A-Z0-9:+-]*\)$/, '')) rescue DateTime.now
             [date, subject]
           end
           title = "@#{@name} has new mail (#{num_unseen} unseen)"
