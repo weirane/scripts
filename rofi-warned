@@ -1,0 +1,10 @@
+#!/bin/sh
+
+[ $# -gt 0 ] || exit 0
+
+: "${_M=Are you sure?}"
+ans=$(printf 'No\nYes\n' | rofi -width 25 -l 5 -dmenu -no-custom -i -p "$_M")
+[ "$ans" != Yes ] && exit
+unset _M
+
+exec "$@"
