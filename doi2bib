@@ -8,4 +8,4 @@ doi=$(echo "$1" | sed 's+(https?://)?(dx\.)?doi.org/++')
 
 curl -sSLH "Accept: text/bibliography; style=bibtex" "https://dx.doi.org/$doi" |
     sed -e 's/^ //' -e 's/}}/}\n}/' |
-    perl -pe 's/(\w+)={(.*?)}(?:, )?/\n    \1={\2},/g'
+    perl -pe 's/(\w+)=({.*?})(?:, )?/\n    \1 = \2,/g'
