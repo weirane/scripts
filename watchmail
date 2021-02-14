@@ -20,6 +20,7 @@
 #       user: 'example@example.com',
 #       pswd: `pass show example`.strip,
 #       notify_cmd: 'mbsync example &',
+#       idle_interval: 24 * 60,
 #     },
 #     example_name_pull: {
 #       type: 'pull',
@@ -39,6 +40,7 @@ require 'mail'
 require 'net/imap'
 require 'open3'
 require 'set'
+require 'timeout'
 begin
   config_file = File.join(ENV['XDG_CONFIG_HOME'] || File.join(ENV.fetch('HOME'), '.config'),
                           'watchmailrc.rb')
@@ -101,7 +103,9 @@ class Account
 
   def check
     loop do
-      ids = @session.search(['UNSEEN'])
+      ids = Timeout.timeout(10, nil, "#{@name}: search unseen timed out") do
+        @session.search(['UNSEEN'])
+      end
       num_unseen = ids.length
       yield num_unseen
 
@@ -138,6 +142,11 @@ class Account
 end
 
 class PushAccount < Account
+  def initialize(name, config)
+    super(name, config)
+    @idle_interval = config.fetch(:idle_interval, 24 * 60)
+  end
+
   def check_capability
     unless @session.capability.include? 'IDLE'
       @session.disconnect
@@ -146,7 +155,7 @@ class PushAccount < Account
   end
 
   def wait
-    @session.idle(29 * 60) do |resp|
+    @session.idle(@idle_interval) do |resp|
       if resp.is_a?(Net::IMAP::UntaggedResponse) &&
          (%w[EXISTS EXPUNGE].include?(resp.name) ||
           (resp.name == 'FETCH' && resp.data.attr.keys.include?('FLAGS')))
@@ -206,7 +215,7 @@ def main
             queue << [acc.name, num_unseen]
           end
         rescue Errno::ETIMEDOUT, Errno::ECONNRESET, Errno::ENETUNREACH,
-               Net::IMAP::ByeResponseError, EOFError
+               Net::IMAP::ByeResponseError, EOFError, Timeout::Error
           acc.login
         rescue StandardError => e
           warn e.inspect
