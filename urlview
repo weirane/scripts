@@ -11,7 +11,7 @@ EOF
 
 if [ "$1" = -r ]; then
     # reverse
-    urls=$(grep -oE "$url_regex" | awk '!x[$0]++' | tac)
+    urls=$(grep -oE "$url_regex" | tac | awk '!x[$0]++')
     shift
 else
     urls=$(grep -oE "$url_regex" | awk '!x[$0]++')
