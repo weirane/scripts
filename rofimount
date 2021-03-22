@@ -2,9 +2,9 @@
 
 # Use rofi to choose a partition to mount
 
-chosen=$(lsblk -rnpo "label,name,size,type,mountpoint" |
+chosen=$(lsblk -rnpo "label,name,size,fstype,type,mountpoint" |
     sed 's/^ /NoLabel /' |
-    awk '/(part|crypt) $/ && !/WINRE_DRV/ { printf "%s %s (%s)\n",$2,$1,$3 }' |
+    awk '/(part|crypt) $/ && $4 != "crypto_LUKS" && !/WINRE_DRV/ { printf "%s %s (%s)\n",$2,$1,$3 }' |
     rofi -dmenu -no-custom -i -p "Mount which drive?" |
     cut -d' ' -f1) || exit 0
 
