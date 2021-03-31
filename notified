@@ -1,0 +1,23 @@
+#!/bin/sh
+
+[ $# = 0 ] && exit 1
+
+hascmd() {
+    command -v "$1" >/dev/null
+}
+
+hascmd xdotool && awin=$(xdotool getactivewindow)
+
+"$@"
+ecode=$?
+
+[ "$ecode" != 0 ] && ecodestr=" ($ecode)"
+hascmd notify-send && notify-send "Command completed${ecodestr-}" "$*"
+
+if [ -n "${awin-}" ]; then
+    xdotool set_window --urgency 1 "$awin"
+else
+    printf "\a"
+fi
+
+exit "$ecode"
