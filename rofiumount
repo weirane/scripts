@@ -2,16 +2,16 @@
 
 # Use rofi to choose a partition to umount
 
-chosen=$(lsblk -nrpo "label,type,size,mountpoint" |
+chosen=$(lsblk -nrpo "label,type,size,name,mountpoint" |
     sed 's/^ /NoLabel /' |
-    awk '$2 ~ /^(part|crypt)$/ && $4 !~ /^\/(boot|home|var|efi)|SWAP/ && length($4) > 1 {
-        printf "%s %s (%s)\n",$4,$1,$3
+    awk '$2 ~ /^(part|crypt)$/ && $5 !~ /^\/(boot|home|var|efi)|SWAP/ && length($5) > 1 {
+        printf "%s %s %s (%s)\n",$4,$5,$1,$3
     }' |
     rofi -dmenu -no-custom -i -p "Unmount which drive?" |
     cut -d' ' -f1) || exit 0
 
 if [ -n "$chosen" ]; then
-    if umount "$chosen"; then
+    if udisksctl unmount -b "$chosen" >/dev/null; then
         notify-send "💻 Umount" "$chosen: success"
     else
         notify-send "💻 Umount" "$chosen: failed"
