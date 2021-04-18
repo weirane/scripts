@@ -1,6 +1,20 @@
-#!/bin/sh
+#!/bin/bash
 
 # Show the command line of a process specified by PID
+# Examples:
+#   $ cmdof 1
+#   $ pgrep alacritty | cmdof
+#   $ pgrep alacritty | cmdof - -n
 
-[ -z "$1" ] && exit
-xargs -0 < "/proc/$1/cmdline"
+set -e
+
+if [[ ! -t 0 ]] && [[ $1 =~ ^-?$ ]]; then
+    [[ $2 != -n ]] && verbose=1
+    readarray -td$'\n' pid
+else
+    pid=("$@")
+fi
+for p in "${pid[@]}"; do
+    (( verbose )) && printf '%s ' "$p"
+    xargs -0 < "/proc/$p/cmdline"
+done

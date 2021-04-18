@@ -2,5 +2,10 @@
 
 # Show the environment of a process specified by PID
 
-[ -z "$1" ] && exit
-tr '\0' '\n' < "/proc/$1/environ"
+if [ ! -t 0 ] && [ "$1" = - ]; then
+    pid=$(head -1)
+else
+    pid=$1
+fi
+[ -z "$pid" ] && exit
+tr '\0' '\n' < "/proc/$pid/environ"
