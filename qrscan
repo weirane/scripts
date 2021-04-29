@@ -1,0 +1,18 @@
+#!/bin/sh
+
+set -e
+
+content=$(scrot -os /dev/stdout | zbarimg -q - || true)
+if ! expr "$content" : QR-Code: >/dev/null; then
+    notify-send 'qrscan' 'failed'
+    exit
+fi
+
+content=${content#QR-Code:}
+action=$(printf 'Copy\nOpen\nAbort\n' |
+    rofi -dmenu -i -no-custom -lines 6 -p 'Action' \
+         -mesg "$(echo "$content" | sed 's/&/&amp;/g')")
+case $action in
+    Copy) echo "$content" | xclip -selection clipboard ;;
+    Open) xdg-open "$content" ;;
+esac
