@@ -4,6 +4,9 @@ killall -q polybar
 
 while pgrep -U "$(id -ru)" -x polybar >/dev/null; do sleep 1; done
 
+DPI=$(xrdb -q | grep 'Xft.dpi' | awk '{ print $2 }')
+export DPI
+
 polybar --list-monitors | while read -r line; do
     moni=${line%%:*}
     if expr "$line" : '.*primary' >/dev/null; then
