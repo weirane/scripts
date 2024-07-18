@@ -1,10 +1,10 @@
-#!/bin/sh
-
-# The dropdown terminal for my i3 config
-
-# check if the dropdown terminal already exists
-xdotool search --class Alacritty search --classname dropdown-terminal >/dev/null && exit
+#!/bin/zsh
 
 cd || true
-alacritty --title=Dropdown --class=dropdown-terminal \
-    -e sh -c 'while true; do tmux new -A -s dropdown || break; done' &
+
+args=(--title='Dropdown Terminal'
+      -o window.opacity=1
+      -o window.decorations='"Full"'
+      -e sh -c "while true; do tmux new -A -s dropdown || break; done")
+
+alacritty ${args[@]} &

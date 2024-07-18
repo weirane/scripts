@@ -1,6 +1,7 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-# Show the command line of a process specified by PID
+# Show the command line of a process specified by PID.
+# Does not work with the built-in bash in macOS. Install from homebrew.
 # Examples:
 #   $ cmdof 1
 #   $ pgrep alacritty | cmdof
@@ -15,6 +16,6 @@ else
     pid=("$@")
 fi
 for p in "${pid[@]}"; do
-    (( verbose )) && printf '%s ' "$p"
-    xargs -0 < "/proc/$p/cmdline"
+    (( verbose )) && printf '%s: ' "$p"
+    ps -ww -p "$p" -o args=
 done

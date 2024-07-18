@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 while :; do
     curl --connect-timeout 1 -s "https://ipinfo.io/$1" | jq .
