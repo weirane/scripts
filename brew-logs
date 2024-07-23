@@ -1,0 +1,18 @@
+#!/bin/zsh
+
+logdir='/opt/homebrew/var/log'
+
+app=$1
+follow=$2
+
+if [[ $follow == '-f' ]]; then
+    prog=(tail -f)
+else
+    prog=(less -FRSXMK --mouse --wheel-lines=3 '-#' 10)
+fi
+
+case $app in
+    sketchybar | v2ray)
+        ${prog[@]} $logdir/$app/$app.err.log
+        ;;
+esac
