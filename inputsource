@@ -1,0 +1,16 @@
+#!/bin/zsh
+
+if [[ $1 == switch ]]; then
+    for x in {1..4}; do
+        timeout 0.3s osascript \
+                        -e 'tell application "System Events"' \
+                        -e 'key code 49 using control down' \
+                        -e 'end tell' && break
+    done
+else
+    if defaults read $HOME/Library/Preferences/com.apple.HIToolbox.plist AppleSelectedInputSources | grep -q '"KeyboardLayout Name" = "U.S."'; then
+        echo US
+    else
+        echo Non-US
+    fi
+fi
