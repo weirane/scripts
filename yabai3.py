@@ -73,7 +73,6 @@ def move_floating(window, direction: str, amount):
         run(['yabai', '-m', 'window', wid, '--move', f'rel:{x}:{y}'])
     elif amount == 'display':
         run(['yabai', '-m', 'window', wid, '--display', direction])
-        center(window)
         run(['yabai', '-m', 'window', '--focus', wid])
     else:
         amount = int(amount)
@@ -95,14 +94,8 @@ def move_floating(window, direction: str, amount):
 def move_to_switch(window, space):
     '''Move window to another space and focus on it'''
     wid = str(window['id'])
-    display = window['display']
-    new_space = json_run(['yabai', '-m', 'query', '--spaces', '--space', space])
-    new_display = new_space['display']
 
     run(['yabai', '-m', 'window', wid, '--space', space])
-    # center if move floating window to new display
-    if window['is-floating'] and display != new_display:
-        center(window)
     run(['yabai', '-m', 'window', '--focus', wid])
 
 
