@@ -3,8 +3,7 @@
 cd || true
 
 args=(--title='Dropdown Terminal'
-      -o window.opacity=1
-      -o window.decorations='"Full"'
+      --config-file $HOME/.config/alacritty/dropdown.toml
       -e sh -c "while true; do tmux new -A -s dropdown || break; done")
 
 alacritty ${args[@]} &
