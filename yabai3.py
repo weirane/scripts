@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from subprocess import run, PIPE
+from subprocess import run, PIPE, DEVNULL
 import json
 import operator
 import sys
@@ -12,7 +12,7 @@ BAR_HEIGHT = 36
 def json_run(args):
     '''Run command and return json output'''
     shell = isinstance(args, str)
-    r = run(args, stdout=PIPE, shell=shell).stdout
+    r = run(args, stdout=PIPE, stderr=DEVNULL, shell=shell).stdout
     return json.loads(r) if r else None
 
 
@@ -137,7 +137,7 @@ def focus_toggle():
 def focus_first():
     '''Focus on the first window in the current space'''
     windows = json_run('yabai -m query --windows --space')
-    if windows:
+    if windows and windows[0]['is-visible']:
         run(f'yabai -m window --focus {windows[0]["id"]}'.split())
 
 
