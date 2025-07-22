@@ -144,18 +144,26 @@ def focus_first():
 def focus_tiling(direction):
     '''Switch focus between tiled or stacked windows, or focus on another
     display if there is no other tiled window in the direction'''
-    STACK_DIRECTION = {
-        'east': 'stack.next',
-        'west': 'stack.prev',
-    }
     space = json_run('yabai -m query --spaces --space')
-    if space['type'] == 'stack':
-        if direction == 'west' or direction == 'east':
+
+    # Use stack navigation with loopback if we have multiple stacked windows
+    if space['type'] == 'stack' and (direction == 'north' or direction == 'south'):
+        STACK_DIRECTION = { 'south': 'stack.next', 'north': 'stack.prev' }
+        STACK_LOOPBACK = { 'south': 'stack.first', 'north': 'stack.last' }
+        # Check if there are multiple windows in the stack
+        space_windows = json_run('yabai -m query --windows --space')
+        stacked_windows = [
+            w for w in space_windows
+            if not w.get("is-floating", True) and w.get("is-visible", False) and w.get("stack-index", 0) > 0
+        ]
+        if len(stacked_windows) > 1:
             run(f'''yabai -m window --focus {STACK_DIRECTION[direction]} ||
-                    yabai -m display --focus {direction}''', shell=True)
-    else:
-        run(f'''yabai -m window --focus {direction} ||
-                yabai -m display --focus {direction}''', shell=True)
+                    yabai -m window --focus {STACK_LOOPBACK[direction]}''', shell=True)
+            return
+
+    # Default behavior for all other cases
+    run(f'''yabai -m window --focus {direction} ||
+            yabai -m display --focus {direction}''', shell=True)
 
 
 def focus_floating(direction, curr):
