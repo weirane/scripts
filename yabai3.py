@@ -148,8 +148,8 @@ def focus_tiling(direction):
 
     # Use stack navigation with loopback if we have multiple stacked windows
     if space['type'] == 'stack' and (direction == 'north' or direction == 'south'):
-        STACK_DIRECTION = { 'south': 'stack.next', 'north': 'stack.prev' }
-        STACK_LOOPBACK = { 'south': 'stack.first', 'north': 'stack.last' }
+        STACK_DIRECTION = { 'north': 'stack.next', 'south': 'stack.prev' }
+        STACK_LOOPBACK = { 'north': 'stack.first', 'south': 'stack.last' }
         # Check if there are multiple windows in the stack
         space_windows = json_run('yabai -m query --windows --space')
         stacked_windows = [
