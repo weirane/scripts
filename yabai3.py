@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
 
 from subprocess import run, PIPE, DEVNULL
+from typing import Never
 import json
 import operator
 import sys
+import time
+import re
+import os
 
 BAR_HEIGHT = 36
 
@@ -19,6 +23,19 @@ def json_run(args):
 def current_window():
     '''Get the current focused window in json'''
     return json_run('yabai -m query --windows --window')
+
+
+def err(message: str) -> Never:
+    print(f"yabai3: {message}")
+    sys.exit(1)
+
+
+def get_dropdownterm():
+    '''Get the dropdownterm window or None if not found'''
+    windows = json_run(["yabai", "-m", "query", "--windows"])
+    if not windows:
+        return None
+    return next((w for w in windows if w.get("scratchpad") == "dropdownterm"), None)
 
 
 # --- move ---
@@ -204,6 +221,63 @@ def focus_floating(direction, curr):
         run(f'yabai -m display --focus {direction}'.split())
 
 
+# --- resize ---
+def resize(scale_type, orientation, factor):
+    try:
+        factor = int(factor)
+    except ValueError:
+        err(f"resize: scale factor not a number: {factor}")
+
+    if scale_type == "shrink":
+        r = -factor
+    elif scale_type == "grow":
+        r = factor
+    else:
+        err(f"resize: unknown scale: {scale_type}")
+
+    if orientation == "width":
+        run(f"""yabai -m window --resize right:{r}:0 2>/dev/null ||
+                yabai -m window --resize left:{r}:0""", shell=True)
+    elif orientation == "height":
+        run(f"""yabai -m window --resize bottom:0:{r} 2>/dev/null ||
+                yabai -m window --resize top:0:{r}""", shell=True)
+    else:
+        err(f"resize: unknown orientation: {orientation}")
+
+
+# --- dropdownterm ---
+def toggle_dropdownterm():
+    # Check if tmux session is attached
+    result = run(["tmux", "ls"], stdout=PIPE, text=True)
+    if not re.search(r'dropdown:.*attached', result.stdout):
+        # No dropdown terminal detected. Start dropdownterm
+        run([os.path.expanduser('~/scripts/dropdownterm')])
+        time.sleep(0.5)
+
+        # Get dropdownterm window ID and make it sticky
+        if (ddt_window := get_dropdownterm()):
+            ddt_id = ddt_window["id"]
+            run(["yabai", "-m", "window", str(ddt_id), "--toggle", "sticky"])
+        return
+
+    # Find dropdownterm window
+    ddt_window = get_dropdownterm()
+    if not ddt_window:
+        err("dropdownterm not found")
+
+    ddt_id = ddt_window["id"]
+    ddt_visible = ddt_window["is-visible"]
+
+    if ddt_visible:
+        # Make unsticky before hiding
+        run(["yabai", "-m", "window", str(ddt_id), "--toggle", "sticky"])
+        run(["yabai", "-m", "window", str(ddt_id), "--toggle", "dropdownterm"])
+    else:
+        # Make sticky and center after showing
+        run(["yabai", "-m", "window", str(ddt_id), "--toggle", "dropdownterm"])
+        run(["yabai", "-m", "window", str(ddt_id), "--toggle", "sticky"])
+
+
 if __name__ == '__main__':
     cmd = sys.argv[1]
     match cmd:
@@ -233,5 +307,11 @@ if __name__ == '__main__':
                         focus_floating(arg, curr)
                     else:
                         focus_tiling(arg)
+        case 'resize':
+            if len(sys.argv) < 5:
+                err("resize: insufficient arguments")
+            resize(sys.argv[2], sys.argv[3], sys.argv[4])
+        case 'toggle-dropdownterm':
+            toggle_dropdownterm()
         case _:
             print('unknown command', cmd)
