@@ -158,6 +158,13 @@ def focus_first():
         run(f'yabai -m window --focus {windows[0]["id"]}'.split())
 
 
+def focus_stack(direction):
+    '''Focus on stack.next or stack.prev window in a stack with loopback'''
+    STACK_LOOPBACK = { 'stack.next': 'stack.first', 'stack.prev': 'stack.last' }
+    run(f'''yabai -m window --focus {direction} ||
+            yabai -m window --focus {STACK_LOOPBACK[direction]}''', shell=True)
+
+
 def focus_tiling(direction):
     '''Switch focus between tiled or stacked windows, or focus on another
     display if there is no other tiled window in the direction'''
@@ -165,17 +172,13 @@ def focus_tiling(direction):
 
     # Use stack navigation with loopback if we have multiple stacked windows
     if space['type'] == 'stack' and (direction == 'north' or direction == 'south'):
-        STACK_DIRECTION = { 'north': 'stack.next', 'south': 'stack.prev' }
-        STACK_LOOPBACK = { 'north': 'stack.first', 'south': 'stack.last' }
         # Check if there are multiple windows in the stack
-        space_windows = json_run('yabai -m query --windows --space')
         stacked_windows = [
-            w for w in space_windows
+            w for w in json_run('yabai -m query --windows --space') or []
             if not w.get("is-floating", True) and w.get("is-visible", False) and w.get("stack-index", 0) > 0
         ]
         if len(stacked_windows) > 1:
-            run(f'''yabai -m window --focus {STACK_DIRECTION[direction]} ||
-                    yabai -m window --focus {STACK_LOOPBACK[direction]}''', shell=True)
+            focus_stack('stack.next' if direction == 'north' else 'stack.prev')
             return
 
     # Default behavior for all other cases
@@ -301,6 +304,8 @@ if __name__ == '__main__':
                     focus_toggle()
                 case 'first':
                     focus_first()
+                case 'stack.next' | 'stack.prev':
+                    focus_stack(arg)
                 case 'west' | 'east' | 'north' | 'south':
                     curr = current_window()
                     if curr and curr['is-floating']:
