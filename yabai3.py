@@ -17,7 +17,7 @@ def json_run(args):
     '''Run command and return json output'''
     shell = isinstance(args, str)
     r = run(args, stdout=PIPE, stderr=DEVNULL, shell=shell).stdout
-    return json.loads(r) if r else None
+    return json.loads(r) if r else {}
 
 
 def current_window():
@@ -26,7 +26,7 @@ def current_window():
 
 
 def err(message: str) -> Never:
-    print(f"yabai3: {message}")
+    print(f"yabai3: {message}", file=sys.stderr)
     sys.exit(1)
 
 
