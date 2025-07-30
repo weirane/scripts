@@ -224,6 +224,47 @@ def focus_floating(direction, curr):
         run(f'yabai -m display --focus {direction}'.split())
 
 
+def get_drawn_spaces(display_index):
+    '''Get all spaces with drawing=on on the given display and the active space'''
+    spaces_on_display = json_run(f'yabai -m query --spaces --display {display_index}') or []
+
+    drawn_spaces = []
+    active_space = None
+
+    for space in spaces_on_display:
+        space_id = space['index']
+        # Query sketchybar to check if drawing=on and if is the active space
+        sketchybar_data = json_run(['sketchybar', '--query', f'space.{space_id}'])
+        if not sketchybar_data:
+            err(f"sketchybar query failed for space {space_id} on display {display_index}")
+        if sketchybar_data['geometry']['drawing'] == 'on':
+            drawn_spaces.append(space_id)
+        if sketchybar_data['geometry']['background']['drawing'] == 'on':
+            active_space = space_id
+
+    if active_space is None:
+        err(f"no active space found on display {display_index}")
+    if active_space not in drawn_spaces:
+        err(f"active space {active_space} is not in drawn spaces on display {display_index}")
+    return active_space, sorted(drawn_spaces)
+
+
+def focus_space(direction, display_index: int):
+    '''Focus on the next or previous space with drawing=on, with looping'''
+    # Get both the active space and drawn spaces in one call
+    current_sid, drawn_spaces = get_drawn_spaces(display_index)
+    if len(drawn_spaces) <= 1:
+        return  # Nothing to cycle through
+
+    current_pos = drawn_spaces.index(current_sid)
+    if direction == 'next':
+        next_pos = (current_pos + 1) % len(drawn_spaces)
+    else:  # direction == 'prev'
+        next_pos = (current_pos - 1) % len(drawn_spaces)
+    target_space = drawn_spaces[next_pos]
+    run(['yabai', '-m', 'space', '--focus', str(target_space)])
+
+
 # --- resize ---
 def resize(scale_type, orientation, factor):
     try:
@@ -306,6 +347,15 @@ if __name__ == '__main__':
                     focus_first()
                 case 'stack.next' | 'stack.prev':
                     focus_stack(arg)
+                case 'space.next' | 'space.prev':
+                    direction = arg.split('.')[1]
+                    # Get display index in argv[3] or use current display
+                    if len(sys.argv) <= 3:
+                        # Use current display
+                        display_index = json_run('yabai -m query --displays --display')['index']
+                    else:
+                        display_index = int(sys.argv[3])
+                    focus_space(direction, display_index)
                 case 'west' | 'east' | 'north' | 'south':
                     curr = current_window()
                     if curr and curr['is-floating']:
