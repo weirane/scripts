@@ -225,27 +225,22 @@ def focus_floating(direction, curr):
 
 
 def get_drawn_spaces(display_index):
-    '''Get all spaces with drawing=on on the given display and the active space'''
-    spaces_on_display = json_run(f'yabai -m query --spaces --display {display_index}') or []
-
-    drawn_spaces = []
-    active_space = None
-
-    for space in spaces_on_display:
-        space_id = space['index']
-        # Query sketchybar to check if drawing=on and if is the active space
-        sketchybar_data = json_run(['sketchybar', '--query', f'space.{space_id}'])
-        if not sketchybar_data:
-            err(f"sketchybar query failed for space {space_id} on display {display_index}")
-        if sketchybar_data['geometry']['drawing'] == 'on':
-            drawn_spaces.append(space_id)
-        if sketchybar_data['geometry']['background']['drawing'] == 'on':
-            active_space = space_id
-
+    """Get all spaces with drawing=on on the given display and the active space"""
+    # Get all spaces on the display
+    active_space = next(
+        (s["index"] for s in json_run(f"yabai -m query --spaces --display {display_index}") if s["is-visible"]),
+        None,
+    )
     if active_space is None:
         err(f"no active space found on display {display_index}")
-    if active_space not in drawn_spaces:
-        err(f"active space {active_space} is not in drawn spaces on display {display_index}")
+
+    # Get all windows with normal windows
+    drawn_spaces = {
+        window["space"]
+        for window in json_run(f"yabai -m query --windows --display {display_index}") or []
+        if not window["is-sticky"] and window["scratchpad"] != "dropdownterm"
+    }
+    drawn_spaces.add(active_space)
     return active_space, sorted(drawn_spaces)
 
 
