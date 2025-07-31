@@ -85,8 +85,7 @@ def move_floating(window, direction: str, amount):
                 x = 0
                 y = dis['y'] + dis['h'] - win['y'] - win['h']
             case _:
-                print('move_floating: unknown direction', direction)
-                exit(1)
+                err(f'move_floating: unknown direction {direction}')
         run(['yabai', '-m', 'window', wid, '--move', f'rel:{x}:{y}'])
     elif amount == 'display':
         run(['yabai', '-m', 'window', wid, '--display', direction])
@@ -103,8 +102,7 @@ def move_floating(window, direction: str, amount):
             case 'south':
                 rel = f'rel:0:{amount}'
             case _:
-                print('move_floating: unknown direction', direction)
-                exit(1)
+                err(f'move_floating: unknown direction {direction}')
         run(['yabai', '-m', 'window', wid, '--move', rel])
 
 
@@ -234,7 +232,7 @@ def get_drawn_spaces(display_index):
     if active_space is None:
         err(f"no active space found on display {display_index}")
 
-    # Get all windows with normal windows
+    # Get all spaces with normal windows
     drawn_spaces = {
         window["space"]
         for window in json_run(f"yabai -m query --windows --display {display_index}") or []
@@ -364,4 +362,4 @@ if __name__ == '__main__':
         case 'toggle-dropdownterm':
             toggle_dropdownterm()
         case _:
-            print('unknown command', cmd)
+            err(f'unknown command {cmd}')
