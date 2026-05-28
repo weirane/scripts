@@ -286,7 +286,18 @@ def resize(scale_type, orientation, factor):
 def toggle_dropdownterm():
     # Check if tmux session is attached
     result = run(["tmux", "ls"], stdout=PIPE, text=True)
-    if not re.search(r'dropdown:.*attached', result.stdout):
+    dropdown_attached = bool(re.search(r'dropdown:.*attached', result.stdout))
+
+    if dropdown_attached and not get_dropdownterm():
+        # Stale dropdown term window (unmanaged by yabai), kill it
+        proc = "alacritty.*--title=Dropdown Terminal.*dropdown.toml"
+        if run(["pgrep", "-f", proc], stdout=DEVNULL).returncode != 0:
+            err("stale dropdownterm not found")
+        run(["pkill", "-TERM", "-f", proc])
+        time.sleep(0.2)
+        dropdown_attached = False
+
+    if not dropdown_attached:
         # No dropdown terminal detected. Start dropdownterm
         run([os.path.expanduser('~/scripts/dropdownterm')])
         time.sleep(0.5)
